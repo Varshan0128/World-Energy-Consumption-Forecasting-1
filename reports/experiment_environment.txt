@@ -1,0 +1,7 @@
+Python Version: 3.12.13 (main, Mar  6 2026, 16:37:31) [GCC 13.3.0]
+PyTorch Version: 2.14.1+cu130
+Pandas Version: 3.0.6
+NumPy Version: 2.5.4
+Scikit-Learn Version: 1.9.1
+OS: Linux 6.8.0
+Architecture: x86_64

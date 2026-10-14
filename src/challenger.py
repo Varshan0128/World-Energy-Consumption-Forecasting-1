@@ -250,8 +250,9 @@ def export_all_outputs():
     results, test_years, test_true, val_years, val_true = run_all_experiments()
 
     os.makedirs("outputs", exist_ok=True)
+    os.makedirs("reports", exist_ok=True)
 
-    # 1. Export jules_metrics.json
+    # 1. Export metrics JSON to outputs/ and reports/
     metrics_export = {
         'test_period': '2015-2024',
         'val_period': '2007-2014',
@@ -268,8 +269,10 @@ def export_all_outputs():
 
     with open("outputs/jules_metrics.json", "w") as f:
         json.dump(metrics_export, f, indent=2)
+    with open("reports/test_results.json", "w") as f:
+        json.dump(metrics_export, f, indent=2)
 
-    # 2. Export jules_model_comparison.csv
+    # 2. Export model comparison CSV
     comp_rows = []
     for model_name, res in results.items():
         row = {
@@ -290,15 +293,17 @@ def export_all_outputs():
 
     comp_df = pd.DataFrame(comp_rows)
     comp_df.to_csv("outputs/jules_model_comparison.csv", index=False)
+    comp_df.to_csv("reports/model_comparison.csv", index=False)
 
-    # 3. Export jules_test_predictions.csv
+    # 3. Export test predictions CSV
     pred_df = pd.DataFrame({'Year': test_years, 'Actual_TWh': test_true})
     for model_name, res in results.items():
         pred_df[f'{model_name}_Pred_TWh'] = np.round(res['test_preds'], 2)
         pred_df[f'{model_name}_Error_TWh'] = np.round(res['test_preds'] - test_true, 2)
 
     pred_df.to_csv("outputs/jules_test_predictions.csv", index=False)
-    print("Exported all metrics and CSVs to outputs/")
+    pred_df.to_csv("reports/test_predictions.csv", index=False)
+    print("Exported all metrics and CSVs to outputs/ and reports/")
 
 if __name__ == '__main__':
     export_all_outputs()

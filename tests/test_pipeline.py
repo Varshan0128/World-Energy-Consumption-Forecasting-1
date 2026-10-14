@@ -12,12 +12,10 @@ def test_sequence_alignment():
     years = data['years']
     df = data['df']
 
-    # Check for a specific known target year, e.g. 2015
     idx = np.where(years == 2015)[0][0]
     target_val = y_raw[idx]
     input_window = X_raw[idx]
 
-    # Actual values in df for 2010..2014 and 2015
     df_2015_val = df[df['year'] == 2015]['primary_energy_consumption'].values[0]
     df_window_vals = df[(df['year'] >= 2010) & (df['year'] <= 2014)]['primary_energy_consumption'].values
 
@@ -59,6 +57,18 @@ def test_metrics_calculation():
     assert np.isclose(metrics['mae'], 20.0 / 3.0)
     assert np.isclose(metrics['rmse'], np.sqrt((100 + 100 + 0) / 3.0))
     assert metrics['mae'] > 0
+
+def test_reports_artifact_integrity():
+    """Verify that all mandatory reports/ artifacts exist and are populated."""
+    required_files = [
+        'reports/experiment_environment.txt',
+        'reports/model_comparison.csv',
+        'reports/test_predictions.csv',
+        'reports/test_results.json'
+    ]
+    for filepath in required_files:
+        assert os.path.exists(filepath), f"Missing required artifact: {filepath}"
+        assert os.path.getsize(filepath) > 0, f"Empty artifact file: {filepath}"
 
 def test_saved_model_inference():
     """Verify saved PyTorch model checkpoint loading and inference reproducibility."""
