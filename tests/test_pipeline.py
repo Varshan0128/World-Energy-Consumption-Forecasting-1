@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import torch
 import os
+import json
 from src.challenger import load_and_preprocess_data, compute_metrics, GRUModel, LSTMModel, SimpleRNNModel
 
 def test_sequence_alignment():
@@ -69,6 +70,18 @@ def test_reports_artifact_integrity():
     for filepath in required_files:
         assert os.path.exists(filepath), f"Missing required artifact: {filepath}"
         assert os.path.getsize(filepath) > 0, f"Empty artifact file: {filepath}"
+
+def test_seed_breakdown_metrics():
+    """Verify that test_results.json contains individual seed metrics and ensemble metrics structure."""
+    with open("reports/test_results.json", "r") as f:
+        data = json.load(f)
+
+    assert "models" in data
+    assert "LSTM" in data["models"]
+    lstm_data = data["models"]["LSTM"]
+    assert "individual_seeds" in lstm_data
+    assert "individual_seed_metrics_summary" in lstm_data
+    assert len(lstm_data["individual_seeds"]) == 5
 
 def test_saved_model_inference():
     """Verify saved PyTorch model checkpoint loading and inference reproducibility."""

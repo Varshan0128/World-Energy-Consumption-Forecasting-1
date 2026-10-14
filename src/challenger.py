@@ -199,10 +199,9 @@ def run_all_experiments():
     }
 
     for name, cls in rnn_models.items():
+        seed_results = {}
         val_preds_list = []
         test_preds_list = []
-        val_maes, test_maes = [], []
-        val_rmses, test_rmses = [], []
 
         best_model = None
         best_seed_val_mae = float('inf')
@@ -213,10 +212,13 @@ def run_all_experiments():
             test_preds_list.append(tp)
             v_m = compute_metrics(val_true, vp)
             t_m = compute_metrics(test_true, tp)
-            val_maes.append(v_m['mae'])
-            test_maes.append(t_m['mae'])
-            val_rmses.append(v_m['rmse'])
-            test_rmses.append(t_m['rmse'])
+
+            seed_results[f"seed_{s}"] = {
+                'val_metrics': v_m,
+                'test_metrics': t_m,
+                'val_preds': vp.tolist(),
+                'test_preds': tp.tolist()
+            }
 
             if v_m['mae'] < best_seed_val_mae:
                 best_seed_val_mae = v_m['mae']
@@ -226,22 +228,37 @@ def run_all_experiments():
         os.makedirs("models", exist_ok=True)
         torch.save(best_model.state_dict(), f"models/best_{name.lower()}.pth")
 
-        mean_val_preds = np.mean(val_preds_list, axis=0)
-        mean_test_preds = np.mean(test_preds_list, axis=0)
+        # Ensemble Prediction (Mean across seeds)
+        ensemble_val_preds = np.mean(val_preds_list, axis=0)
+        ensemble_test_preds = np.mean(test_preds_list, axis=0)
+
+        # Mean of Individual Model Metrics across seeds
+        indiv_val_maes = [sr['val_metrics']['mae'] for sr in seed_results.values()]
+        indiv_val_rmses = [sr['val_metrics']['rmse'] for sr in seed_results.values()]
+        indiv_test_maes = [sr['test_metrics']['mae'] for sr in seed_results.values()]
+        indiv_test_rmses = [sr['test_metrics']['rmse'] for sr in seed_results.values()]
 
         results[name] = {
-            'val_metrics': compute_metrics(val_true, mean_val_preds),
-            'test_metrics': compute_metrics(test_true, mean_test_preds),
-            'val_preds': mean_val_preds.tolist(),
-            'test_preds': mean_test_preds.tolist(),
-            'seed_variability': {
-                'val_mae_mean': float(np.mean(val_maes)),
-                'val_mae_std': float(np.std(val_maes)),
-                'test_mae_mean': float(np.mean(test_maes)),
-                'test_mae_std': float(np.std(test_maes)),
-                'test_rmse_mean': float(np.mean(test_rmses)),
-                'test_rmse_std': float(np.std(test_rmses))
-            }
+            'ensemble_val_metrics': compute_metrics(val_true, ensemble_val_preds),
+            'ensemble_test_metrics': compute_metrics(test_true, ensemble_test_preds),
+            'ensemble_val_preds': ensemble_val_preds.tolist(),
+            'ensemble_test_preds': ensemble_test_preds.tolist(),
+            'individual_seeds': seed_results,
+            'individual_seed_metrics_summary': {
+                'val_mae_mean': float(np.mean(indiv_val_maes)),
+                'val_mae_std': float(np.std(indiv_val_maes)),
+                'val_rmse_mean': float(np.mean(indiv_val_rmses)),
+                'val_rmse_std': float(np.std(indiv_val_rmses)),
+                'test_mae_mean': float(np.mean(indiv_test_maes)),
+                'test_mae_std': float(np.std(indiv_test_maes)),
+                'test_rmse_mean': float(np.mean(indiv_test_rmses)),
+                'test_rmse_std': float(np.std(indiv_test_rmses))
+            },
+            # Backward compatibility aliases pointing to Ensemble
+            'val_metrics': compute_metrics(val_true, ensemble_val_preds),
+            'test_metrics': compute_metrics(test_true, ensemble_test_preds),
+            'val_preds': ensemble_val_preds.tolist(),
+            'test_preds': ensemble_test_preds.tolist()
         }
 
     return results, test_years, test_true, val_years, val_true
@@ -264,8 +281,9 @@ def export_all_outputs():
             'val_metrics': res['val_metrics'],
             'test_metrics': res['test_metrics']
         }
-        if 'seed_variability' in res:
-            metrics_export['models'][model_name]['seed_variability'] = res['seed_variability']
+        if 'individual_seed_metrics_summary' in res:
+            metrics_export['models'][model_name]['individual_seed_metrics_summary'] = res['individual_seed_metrics_summary']
+            metrics_export['models'][model_name]['individual_seeds'] = res['individual_seeds']
 
     with open("outputs/jules_metrics.json", "w") as f:
         json.dump(metrics_export, f, indent=2)
@@ -277,18 +295,23 @@ def export_all_outputs():
     for model_name, res in results.items():
         row = {
             'Model': model_name,
-            'Val_MAE_TWh': round(res['val_metrics']['mae'], 2),
-            'Val_RMSE_TWh': round(res['val_metrics']['rmse'], 2),
-            'Test_MAE_TWh': round(res['test_metrics']['mae'], 2),
-            'Test_RMSE_TWh': round(res['test_metrics']['rmse'], 2),
-            'Test_MAPE_pct': round(res['test_metrics']['mape'], 2),
+            'Ensemble_Val_MAE_TWh': round(res['val_metrics']['mae'], 2),
+            'Ensemble_Val_RMSE_TWh': round(res['val_metrics']['rmse'], 2),
+            'Ensemble_Test_MAE_TWh': round(res['test_metrics']['mae'], 2),
+            'Ensemble_Test_RMSE_TWh': round(res['test_metrics']['rmse'], 2),
+            'Ensemble_Test_MAPE_pct': round(res['test_metrics']['mape'], 2),
         }
-        if 'seed_variability' in res:
-            row['Test_MAE_Std'] = round(res['seed_variability']['test_mae_std'], 2)
-            row['Test_RMSE_Std'] = round(res['seed_variability']['test_rmse_std'], 2)
+        if 'individual_seed_metrics_summary' in res:
+            summary = res['individual_seed_metrics_summary']
+            row['Indiv_Test_MAE_Mean'] = round(summary['test_mae_mean'], 2)
+            row['Indiv_Test_MAE_Std'] = round(summary['test_mae_std'], 2)
+            row['Indiv_Test_RMSE_Mean'] = round(summary['test_rmse_mean'], 2)
+            row['Indiv_Test_RMSE_Std'] = round(summary['test_rmse_std'], 2)
         else:
-            row['Test_MAE_Std'] = 0.0
-            row['Test_RMSE_Std'] = 0.0
+            row['Indiv_Test_MAE_Mean'] = round(res['test_metrics']['mae'], 2)
+            row['Indiv_Test_MAE_Std'] = 0.0
+            row['Indiv_Test_RMSE_Mean'] = round(res['test_metrics']['rmse'], 2)
+            row['Indiv_Test_RMSE_Std'] = 0.0
         comp_rows.append(row)
 
     comp_df = pd.DataFrame(comp_rows)
