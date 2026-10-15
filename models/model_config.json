@@ -1,0 +1,13 @@
+{
+  "architecture": "LSTM",
+  "hidden_dim": 16,
+  "learning_rate": 0.01,
+  "scaler": "MinMaxScaler",
+  "target_column": "primary_energy_consumption",
+  "country": "United States",
+  "input_window_length": 5,
+  "train_years": "1970-2006",
+  "val_years": "2007-2014",
+  "test_years": "2015-2024",
+  "parameters_count": 1233
+}
