@@ -1,5 +1,5 @@
 {
-  "architecture": "LSTM",
+  "architecture": "SimpleRNN",
   "hidden_dim": 16,
   "learning_rate": 0.01,
   "scaler": "MinMaxScaler",
@@ -9,5 +9,5 @@
   "train_years": "1970-2006",
   "val_years": "2007-2014",
   "test_years": "2015-2024",
-  "parameters_count": 1233
+  "parameters_count": 321
 }

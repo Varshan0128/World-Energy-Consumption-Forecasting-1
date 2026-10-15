@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import os
 import json
+import pandas as pd
 from src.challenger import load_and_preprocess_data, compute_metrics, GRUModel, LSTMModel, SimpleRNNModel
 
 def test_sequence_alignment():
@@ -65,27 +66,31 @@ def test_reports_artifact_integrity():
         'reports/experiment_environment.txt',
         'reports/model_comparison.csv',
         'reports/test_predictions.csv',
-        'reports/test_results.json'
+        'reports/test_results.json',
+        'reports/hyperparameter_search.csv',
+        'reports/training_history.csv'
     ]
     for filepath in required_files:
         assert os.path.exists(filepath), f"Missing required artifact: {filepath}"
         assert os.path.getsize(filepath) > 0, f"Empty artifact file: {filepath}"
 
-def test_seed_breakdown_metrics():
-    """Verify that test_results.json contains individual seed metrics and ensemble metrics structure."""
-    with open("reports/test_results.json", "r") as f:
-        data = json.load(f)
+def test_hyperparameter_best_epoch_consistency():
+    """Verify that Best_Epoch in hyperparameter_search.csv matches the global minimum validation loss epoch in training_history.csv."""
+    search_df = pd.read_csv('outputs/hyperparameter_search.csv')
+    hist_df = pd.read_csv('outputs/training_history.csv')
 
-    assert "models" in data
-    assert "LSTM" in data["models"]
-    lstm_data = data["models"]["LSTM"]
-    assert "individual_seeds" in lstm_data
-    assert "individual_seed_metrics_summary" in lstm_data
-    assert len(lstm_data["individual_seeds"]) == 5
+    for _, row in search_df.iterrows():
+        cid = row['Config_ID']
+        best_ep = row['Best_Epoch']
+        rep_val_mae = row['Val_MAE_TWh']
+
+        c_hist = hist_df[hist_df['Config_ID'] == cid]
+        act_val_mae = c_hist[c_hist['Epoch'] == best_ep]['Val_MAE_TWh'].values[0]
+        assert np.isclose(rep_val_mae, act_val_mae, atol=1e-3), f"Best epoch metric mismatch for Config {cid}"
 
 def test_saved_model_inference():
     """Verify saved PyTorch model checkpoint loading and inference reproducibility."""
-    model = GRUModel(input_dim=1, hidden_dim=16)
+    model = SimpleRNNModel(input_dim=1, hidden_dim=16)
     model.eval()
     dummy_input = torch.randn(1, 5, 1)
 
@@ -93,10 +98,10 @@ def test_saved_model_inference():
         out1 = model(dummy_input).numpy()
 
     os.makedirs("models", exist_ok=True)
-    tmp_path = "models/test_dummy_gru.pth"
+    tmp_path = "models/test_dummy_rnn.pth"
     torch.save(model.state_dict(), tmp_path)
 
-    loaded_model = GRUModel(input_dim=1, hidden_dim=16)
+    loaded_model = SimpleRNNModel(input_dim=1, hidden_dim=16)
     loaded_model.load_state_dict(torch.load(tmp_path))
     loaded_model.eval()
 

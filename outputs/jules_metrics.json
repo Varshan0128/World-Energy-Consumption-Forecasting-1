@@ -125,7 +125,7 @@
             25941.052734375
           ],
           "best_epoch": 36,
-          "completed_epochs": 66
+          "completed_epochs": 61
         },
         "seed_123": {
           "val_metrics": {
@@ -167,7 +167,7 @@
             26008.259765625
           ],
           "best_epoch": 24,
-          "completed_epochs": 54
+          "completed_epochs": 49
         },
         "seed_456": {
           "val_metrics": {
@@ -209,7 +209,7 @@
             25847.7890625
           ],
           "best_epoch": 5,
-          "completed_epochs": 35
+          "completed_epochs": 30
         },
         "seed_789": {
           "val_metrics": {
@@ -251,7 +251,7 @@
             26120.9765625
           ],
           "best_epoch": 20,
-          "completed_epochs": 50
+          "completed_epochs": 45
         },
         "seed_2024": {
           "val_metrics": {
@@ -293,7 +293,7 @@
             26082.2890625
           ],
           "best_epoch": 35,
-          "completed_epochs": 65
+          "completed_epochs": 60
         }
       }
     },
@@ -365,7 +365,7 @@
             25543.552734375
           ],
           "best_epoch": 22,
-          "completed_epochs": 52
+          "completed_epochs": 47
         },
         "seed_123": {
           "val_metrics": {
@@ -407,7 +407,7 @@
             25694.119140625
           ],
           "best_epoch": 12,
-          "completed_epochs": 42
+          "completed_epochs": 37
         },
         "seed_456": {
           "val_metrics": {
@@ -449,7 +449,7 @@
             25697.13671875
           ],
           "best_epoch": 37,
-          "completed_epochs": 67
+          "completed_epochs": 62
         },
         "seed_789": {
           "val_metrics": {
@@ -491,7 +491,7 @@
             25827.78515625
           ],
           "best_epoch": 29,
-          "completed_epochs": 59
+          "completed_epochs": 54
         },
         "seed_2024": {
           "val_metrics": {
@@ -533,7 +533,7 @@
             25622.81640625
           ],
           "best_epoch": 21,
-          "completed_epochs": 51
+          "completed_epochs": 46
         }
       }
     },
@@ -605,7 +605,7 @@
             25821.3515625
           ],
           "best_epoch": 10,
-          "completed_epochs": 40
+          "completed_epochs": 35
         },
         "seed_123": {
           "val_metrics": {
@@ -647,7 +647,7 @@
             25776.46484375
           ],
           "best_epoch": 36,
-          "completed_epochs": 66
+          "completed_epochs": 61
         },
         "seed_456": {
           "val_metrics": {
@@ -689,7 +689,7 @@
             25875.638671875
           ],
           "best_epoch": 9,
-          "completed_epochs": 39
+          "completed_epochs": 34
         },
         "seed_789": {
           "val_metrics": {
@@ -731,7 +731,7 @@
             25821.4375
           ],
           "best_epoch": 25,
-          "completed_epochs": 55
+          "completed_epochs": 50
         },
         "seed_2024": {
           "val_metrics": {
@@ -773,7 +773,7 @@
             25837.0
           ],
           "best_epoch": 32,
-          "completed_epochs": 62
+          "completed_epochs": 57
         }
       }
     }

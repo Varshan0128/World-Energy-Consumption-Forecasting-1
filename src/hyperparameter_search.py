@@ -7,9 +7,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-# Ensure reproducibility
 def set_seed(seed=42):
     random.seed(seed)
     np.random.seed(seed)
@@ -17,7 +16,6 @@ def set_seed(seed=42):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
-# PyTorch Architecture classes
 class SimpleRNNModel(nn.Module):
     def __init__(self, input_dim=1, hidden_dim=16, num_layers=1):
         super().__init__()
@@ -77,7 +75,6 @@ def run_grid_search_and_rolling_origin():
     y_raw = data['y_raw']
     target_years = data['target_years']
 
-    # Target masks
     train_mask = (target_years >= 1970) & (target_years <= 2006)
     val_mask = (target_years >= 2007) & (target_years <= 2014)
 
@@ -98,7 +95,6 @@ def run_grid_search_and_rolling_origin():
                     config_id += 1
                     set_seed(42)
 
-                    # Fit scaler on training targets strictly
                     scaler = ScalerCls()
                     scaler.fit(y_raw[train_mask].reshape(-1, 1))
 
@@ -118,6 +114,8 @@ def run_grid_search_and_rolling_origin():
                     patience = 25
                     best_val_loss = float('inf')
                     best_epoch = 0
+                    best_val_mae = float('inf')
+                    best_val_rmse = float('inf')
                     patience_counter = 0
 
                     max_epochs = 200
@@ -135,7 +133,6 @@ def run_grid_search_and_rolling_origin():
                             val_out_scaled = model(X_val).squeeze(-1).numpy()
                             val_loss = criterion(model(X_val).squeeze(-1), torch.tensor(y_scaled[val_mask], dtype=torch.float32)).item()
 
-                            # Inverse transform validation predictions to compute MAE in TWh
                             val_preds = scaler.inverse_transform(val_out_scaled.reshape(-1, 1)).flatten()
                             val_mae = mean_absolute_error(y_val_raw, val_preds)
                             val_rmse = np.sqrt(mean_squared_error(y_val_raw, val_preds))
@@ -143,7 +140,15 @@ def run_grid_search_and_rolling_origin():
                             train_preds = scaler.inverse_transform(out.detach().numpy().reshape(-1, 1)).flatten()
                             train_mae = mean_absolute_error(y_raw[train_mask], train_preds)
 
-                        # Log history
+                        if val_loss < best_val_loss:
+                            best_val_loss = val_loss
+                            best_epoch = epoch
+                            best_val_mae = val_mae
+                            best_val_rmse = val_rmse
+                            patience_counter = 0
+                        else:
+                            patience_counter += 1
+
                         training_history_records.append({
                             'Config_ID': config_id,
                             'Architecture': arch_name,
@@ -158,14 +163,8 @@ def run_grid_search_and_rolling_origin():
                             'Val_RMSE_TWh': val_rmse
                         })
 
-                        if val_loss < best_val_loss:
-                            best_val_loss = val_loss
-                            best_epoch = epoch
-                            patience_counter = 0
-                        else:
-                            patience_counter += 1
-                            if patience_counter >= patience:
-                                break
+                        if patience_counter >= patience:
+                            break
 
                     results.append({
                         'Config_ID': config_id,
@@ -176,8 +175,8 @@ def run_grid_search_and_rolling_origin():
                         'Best_Epoch': best_epoch,
                         'Completed_Epochs': epoch,
                         'Best_Val_Loss': best_val_loss,
-                        'Val_MAE_TWh': val_mae,
-                        'Val_RMSE_TWh': val_rmse
+                        'Val_MAE_TWh': best_val_mae,
+                        'Val_RMSE_TWh': best_val_rmse
                     })
 
     os.makedirs("outputs", exist_ok=True)

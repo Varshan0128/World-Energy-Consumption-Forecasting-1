@@ -108,7 +108,7 @@ class GRUModel(nn.Module):
         out, _ = self.gru(x)
         return self.fc(out[:, -1, :])
 
-def train_pytorch_model(model_cls, data, seed=42, max_epochs=200, lr=0.01, hidden_dim=16, patience=30):
+def train_pytorch_model(model_cls, data, seed=42, max_epochs=200, lr=0.01, hidden_dim=16, patience=25):
     set_seed(seed)
 
     scaler = data['scaler']
@@ -235,9 +235,6 @@ def run_all_experiments():
         'GRU': GRUModel
     }
 
-    final_selected_model = None
-    final_selected_scaler = data['scaler']
-
     for name, cls in rnn_models.items():
         seed_results = {}
         val_preds_list = []
@@ -282,17 +279,16 @@ def run_all_experiments():
                 best_seed_val_mae = v_m['mae']
                 best_model = model_inst
 
-        # Save best model checkpoint
+        # Save best model checkpoint for architecture
         os.makedirs("models", exist_ok=True)
         torch.save(best_model.state_dict(), f"models/best_{name.lower()}.pth")
 
-        if name == 'LSTM':
-            final_selected_model = best_model
+        if name == 'SimpleRNN':
             torch.save(best_model.state_dict(), "models/final_model.pth")
             with open("models/scaler.pkl", "wb") as f:
                 pickle.dump(data['scaler'], f)
             config_meta = {
-                'architecture': 'LSTM',
+                'architecture': 'SimpleRNN',
                 'hidden_dim': 16,
                 'learning_rate': 0.01,
                 'scaler': 'MinMaxScaler',
@@ -316,9 +312,13 @@ def run_all_experiments():
         indiv_test_maes = [sr['test_metrics']['mae'] for sr in seed_results.values()]
         indiv_test_rmses = [sr['test_metrics']['rmse'] for sr in seed_results.values()]
 
+        # Ensemble metrics computed strictly on averaged prediction vector
+        ensemble_val_m = compute_metrics(val_true, ensemble_val_preds)
+        ensemble_test_m = compute_metrics(test_true, ensemble_test_preds)
+
         results[name] = {
-            'ensemble_val_metrics': compute_metrics(val_true, ensemble_val_preds),
-            'ensemble_test_metrics': compute_metrics(test_true, ensemble_test_preds),
+            'ensemble_val_metrics': ensemble_val_m,
+            'ensemble_test_metrics': ensemble_test_m,
             'ensemble_val_preds': ensemble_val_preds.tolist(),
             'ensemble_test_preds': ensemble_test_preds.tolist(),
             'individual_seeds': seed_results,
@@ -332,8 +332,8 @@ def run_all_experiments():
                 'test_rmse_mean': float(np.mean(indiv_test_rmses)),
                 'test_rmse_std': float(np.std(indiv_test_rmses))
             },
-            'val_metrics': compute_metrics(val_true, ensemble_val_preds),
-            'test_metrics': compute_metrics(test_true, ensemble_test_preds),
+            'val_metrics': ensemble_val_m,
+            'test_metrics': ensemble_test_m,
             'val_preds': ensemble_val_preds.tolist(),
             'test_preds': ensemble_test_preds.tolist()
         }
@@ -346,7 +346,6 @@ def export_all_outputs():
     os.makedirs("outputs", exist_ok=True)
     os.makedirs("reports", exist_ok=True)
 
-    # 1. Export final metrics JSON to outputs/ and reports/
     metrics_export = {
         'test_period': '2015-2024',
         'val_period': '2007-2014',
@@ -369,12 +368,10 @@ def export_all_outputs():
     with open("outputs/jules_metrics.json", "w") as f:
         json.dump(metrics_export, f, indent=2)
 
-    # 2. Export per seed metrics CSV
     per_seed_df = pd.DataFrame(per_seed_records)
     per_seed_df.to_csv("outputs/per_seed_metrics.csv", index=False)
     per_seed_df.to_csv("reports/per_seed_metrics.csv", index=False)
 
-    # 3. Export model comparison CSV
     comp_rows = []
     for model_name, res in results.items():
         row = {
@@ -406,7 +403,6 @@ def export_all_outputs():
     comp_df.to_csv("outputs/jules_model_comparison.csv", index=False)
     comp_df.to_csv("reports/model_comparison.csv", index=False)
 
-    # 4. Export test predictions CSV
     pred_df = pd.DataFrame({'Year': test_years, 'Actual_TWh': test_true})
     for model_name, res in results.items():
         pred_df[f'{model_name}_Pred_TWh'] = np.round(res['test_preds'], 2)
